@@ -4,6 +4,41 @@ DCCStepper::DCCStepper(int steps, int rpm, int pin1, int pin2, int pin3 , int pi
 {
 int	i;
 
+  this->mode = STEPPER_MODE_CONT;
+  this->maxSteps = 0;
+  this->thisStep = 0;
+  this->pin1 = pin1;
+  this->pin2 = pin2;
+  this->pin3 = pin3;
+  this->pin4 = pin4;
+  this->rpm = rpm;
+  this->steps = steps;
+  unsigned long steps_per_minute = (unsigned long)steps * (unsigned long)rpm;
+  this->interval = 60000 / steps_per_minute;
+  this->refresh = millis() + this->interval;
+  this->active = false;
+  this->clockwise = true;
+
+  for (i = 0; i < 8; i++)
+  {
+	this->pattern[i] = 1 << (i / 2)
+			| ((i & 1) ? (1 << ((i/2) + 1)) : 0);
+  }
+
+  this->currentStep = 0;
+
+  pinMode(pin1, OUTPUT);
+  pinMode(pin2, OUTPUT);
+  pinMode(pin3, OUTPUT);
+  pinMode(pin4, OUTPUT);
+}
+
+DCCStepper::DCCStepper(int mode, unsigned totalSteps, int steps, int rpm, int pin1, int pin2, int pin3 , int pin4)
+{
+int	i;
+
+  this->mode = mode;
+  this->maxSteps = totalSteps;
   this->pin1 = pin1;
   this->pin2 = pin2;
   this->pin3 = pin3;
@@ -43,6 +78,44 @@ void DCCStepper::loop()
     return;
   }
 
+  if (this->mode & STEPPER_MODE_CONSTRAINED)
+  {
+	if (this->clockwise)
+	{
+		if (this->thisStep >= this->maxSteps)
+		{
+			digitalWrite(this->pin1, LOW);
+			digitalWrite(this->pin2, LOW);
+			digitalWrite(this->pin3, LOW);
+			digitalWrite(this->pin4, LOW);
+			if (this->mode & STEPPER_AUTO_REVERSE)
+			{
+				this->mode ^= STEPPER_REVERSE;
+			}
+			return;
+		}
+		this->thisStep++;
+	}
+	else
+	{
+		if (this->thisStep == 0)
+		{
+			digitalWrite(this->pin1, LOW);
+			digitalWrite(this->pin2, LOW);
+			digitalWrite(this->pin3, LOW);
+			digitalWrite(this->pin4, LOW);
+			if (this->mode & STEPPER_AUTO_REVERSE)
+			{
+				this->mode ^= STEPPER_REVERSE;
+			}
+			return;
+		}
+		this->thisStep--;
+	}
+	if (notifyStepperPosition)
+		notifyStepperPosition(this, this->thisStep);
+  }
+
   digitalWrite(this->pin1,
 		(this->pattern[this->currentStep] & 0x8) ? HIGH : LOW);
   digitalWrite(this->pin2,
@@ -72,6 +145,9 @@ void DCCStepper::setSpeed(int percentage, boolean clockwise)
 {
   boolean change = this->percentage != percentage;
   this->percentage = percentage;
+  if (this->mode & STEPPER_REVERSE)
+	clockwise = ! clockwise;
+  change |= (this->clockwise == clockwise);
   this->clockwise = clockwise;
   if (percentage == 0)
   {
@@ -110,4 +186,40 @@ void DCCStepper::setRPM(int rpm)
 					* (unsigned long)rpm;
   this->interval = 60000 / steps_per_minute;
   this->refresh = millis() + this->interval;
+}
+
+/*
+ * Set the mode of the stepper motor.
+ * If we switch from continuous mode to constrained
+ * mode then we mark the current position as the zero point.
+ */
+void DCCStepper::setMode(int mode)
+{
+  if (this->mode == mode) // No change
+  {
+    return;
+  }
+  if ((mode & STEPPER_MODE_CONSTRAINED) !=
+	(this->mode & STEPPER_MODE_CONSTRAINED))
+  {
+    this->thisStep = 0;
+  }
+  this->mode = mode;
+}
+
+void DCCStepper::setMaxStepsLSB(int value)
+{
+  this->maxSteps = (this->maxSteps & 0xff00) + (value & 0xff);
+}
+
+void DCCStepper::setMaxStepsMSB(int value)
+{
+  this->maxSteps = (this->maxSteps & 0xff) + ((value & 0xff) << 8);
+}
+
+void DCCStepper::setCurrentPosition(unsigned int position)
+{
+  if (position > this->maxSteps)
+	position = this->maxSteps;
+  this->thisStep = position;
 }
