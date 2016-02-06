@@ -19,11 +19,15 @@ int	i;
   this->active = false;
   this->clockwise = true;
 
-  for (i = 0; i < 8; i++)
-  {
-	this->pattern[i] = 1 << (i / 2)
-			| ((i & 1) ? (1 << ((i/2) + 1)) : 0);
-  }
+  this->pattern[0] = 0x01; // 0001
+  this->pattern[1] = 0x03; // 0011
+  this->pattern[2] = 0x02; // 0010
+  this->pattern[3] = 0x06; // 0110
+  this->pattern[4] = 0x04; // 0100
+  this->pattern[5] = 0x0c; // 1100
+  this->pattern[6] = 0x08; // 1000
+  this->pattern[7] = 0x09; // 1001
+
 
   this->currentStep = 0;
 
@@ -51,11 +55,14 @@ int	i;
   this->active = false;
   this->clockwise = true;
 
-  for (i = 0; i < 8; i++)
-  {
-	this->pattern[i] = 1 << (i / 2)
-			| ((i & 1) ? (1 << ((i/2) + 1)) : 0);
-  }
+  this->pattern[0] = 0x01; // 0001
+  this->pattern[1] = 0x03; // 0011
+  this->pattern[2] = 0x02; // 0010
+  this->pattern[3] = 0x06; // 0110
+  this->pattern[4] = 0x04; // 0100
+  this->pattern[5] = 0x0c; // 1100
+  this->pattern[6] = 0x08; // 1000
+  this->pattern[7] = 0x09; // 1001
 
   this->currentStep = 0;
 
