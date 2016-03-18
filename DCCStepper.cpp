@@ -18,6 +18,8 @@ int	i;
   this->refresh = millis() + this->interval;
   this->active = false;
   this->clockwise = true;
+  this->waitForDelay = 0;
+  this->revDelay = 0;
 
   this->pattern[0] = 0x01; // 0001
   this->pattern[1] = 0x03; // 0011
@@ -37,7 +39,7 @@ int	i;
   pinMode(pin4, OUTPUT);
 }
 
-DCCStepper::DCCStepper(int mode, unsigned totalSteps, int steps, int rpm, int pin1, int pin2, int pin3 , int pin4)
+DCCStepper::DCCStepper(uint8_t mode, unsigned totalSteps, int steps, int rpm, int pin1, int pin2, int pin3 , int pin4)
 {
 int	i;
 
@@ -55,16 +57,32 @@ int	i;
   this->active = false;
   this->clockwise = true;
 
-  this->pattern[0] = 0x01; // 0001
-  this->pattern[1] = 0x03; // 0011
-  this->pattern[2] = 0x02; // 0010
-  this->pattern[3] = 0x06; // 0110
-  this->pattern[4] = 0x04; // 0100
-  this->pattern[5] = 0x0c; // 1100
-  this->pattern[6] = 0x08; // 1000
-  this->pattern[7] = 0x09; // 1001
+  if (mode & STEPPER_BIPOLAR)
+  {
+    this->pattern[0] = 0x01; // 0001    1 Fwd 2 Off
+    this->pattern[1] = 0x05; // 0101    1 Fwd 2 Fwd
+    this->pattern[2] = 0x04; // 0100	1 Off 2 Fwd
+    this->pattern[3] = 0x06; // 0110	1 Rev 2 Fwd
+    this->pattern[4] = 0x02; // 0010	1 Rev 2 Off
+    this->pattern[5] = 0x0A; // 1010	1 Rev 2 Rev
+    this->pattern[6] = 0x08; // 1000	1 Off 2 Rev
+    this->pattern[7] = 0x09; // 1001	1 Fwd 2 Rev
+  }
+  else
+  {
+    this->pattern[0] = 0x01; // 0001
+    this->pattern[1] = 0x03; // 0011
+    this->pattern[2] = 0x02; // 0010
+    this->pattern[3] = 0x06; // 0110
+    this->pattern[4] = 0x04; // 0100
+    this->pattern[5] = 0x0c; // 1100
+    this->pattern[6] = 0x08; // 1000
+    this->pattern[7] = 0x09; // 1001
+  }
 
   this->currentStep = 0;
+  this->waitForDelay = 0;
+  this->revDelay = 0;
 
   pinMode(pin1, OUTPUT);
   pinMode(pin2, OUTPUT);
@@ -87,6 +105,8 @@ void DCCStepper::loop()
 
   if (this->mode & STEPPER_MODE_CONSTRAINED)
   {
+	if (millis() < this->waitForDelay)
+		return;
 	if (this->clockwise)
 	{
 		if (this->thisStep >= this->maxSteps)
@@ -97,6 +117,16 @@ void DCCStepper::loop()
 			digitalWrite(this->pin4, LOW);
 			if (this->mode & STEPPER_AUTO_REVERSE)
 			{
+				if (this->mode & STEPPER_RANDOM_DELAY)
+				{
+					this->waitForDelay =
+						millis() + ((random(this->revDelay - 1) + 1) * 1000);
+				}
+				else if (this->revDelay)
+				{
+					this->waitForDelay = millis()
+						+ ((unsigned long)this->revDelay * 1000);
+				}
 				this->mode ^= STEPPER_REVERSE;
 			}
 			return;
@@ -113,6 +143,16 @@ void DCCStepper::loop()
 			digitalWrite(this->pin4, LOW);
 			if (this->mode & STEPPER_AUTO_REVERSE)
 			{
+				if (this->mode & STEPPER_RANDOM_DELAY)
+				{
+					this->waitForDelay =
+						millis() + ((random(this->revDelay - 1) + 1) * 1000);
+				}
+				else if (this->revDelay)
+				{
+					this->waitForDelay = millis()
+						+ ((unsigned long)this->revDelay * 1000);
+				}
 				this->mode ^= STEPPER_REVERSE;
 			}
 			return;
@@ -200,7 +240,7 @@ void DCCStepper::setRPM(int rpm)
  * If we switch from continuous mode to constrained
  * mode then we mark the current position as the zero point.
  */
-void DCCStepper::setMode(int mode)
+void DCCStepper::setMode(uint8_t mode)
 {
   if (this->mode == mode) // No change
   {
@@ -210,6 +250,31 @@ void DCCStepper::setMode(int mode)
 	(this->mode & STEPPER_MODE_CONSTRAINED))
   {
     this->thisStep = 0;
+  }
+  if ((mode & STEPPER_BIPOLAR) != (this->mode & STEPPER_BIPOLAR))
+  {
+    if (mode & STEPPER_BIPOLAR)
+    {
+      this->pattern[0] = 0x01; // 0001  1 Fwd 2 Off
+      this->pattern[1] = 0x05; // 0101  1 Fwd 2 Fwd
+      this->pattern[2] = 0x04; // 0100	1 Off 2 Fwd
+      this->pattern[3] = 0x06; // 0110	1 Rev 2 Fwd
+      this->pattern[4] = 0x02; // 0010	1 Rev 2 Off
+      this->pattern[5] = 0x0A; // 1010	1 Rev 2 Rev
+      this->pattern[6] = 0x08; // 1000	1 Off 2 Rev
+      this->pattern[7] = 0x09; // 1001	1 Fwd 2 Rev
+    }
+    else
+    {
+      this->pattern[0] = 0x01; // 0001
+      this->pattern[1] = 0x03; // 0011
+      this->pattern[2] = 0x02; // 0010
+      this->pattern[3] = 0x06; // 0110
+      this->pattern[4] = 0x04; // 0100
+      this->pattern[5] = 0x0c; // 1100
+      this->pattern[6] = 0x08; // 1000
+      this->pattern[7] = 0x09; // 1001
+    }
   }
   this->mode = mode;
 }
@@ -229,4 +294,9 @@ void DCCStepper::setCurrentPosition(unsigned int position)
   if (position > this->maxSteps)
 	position = this->maxSteps;
   this->thisStep = position;
+}
+
+void DCCStepper::setReverseDelay(int revDelay)
+{
+  this->revDelay = revDelay;
 }

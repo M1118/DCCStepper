@@ -11,6 +11,8 @@
 #define STEPPER_MODE_CONSTRAINED	0x01
 #define STEPPER_REVERSE			0x02
 #define STEPPER_AUTO_REVERSE		0x04
+#define STEPPER_RANDOM_DELAY		0x08
+#define STEPPER_BIPOLAR			0x80
 
 class DCCStepper {
   private:
@@ -18,7 +20,7 @@ class DCCStepper {
     int			pin2;
     int			pin3;
     int			pin4;
-    int			mode;
+    uint8_t		mode;
     int			steps;	    // No. Steps per revolution
     int			rpm;	    // Top speed in RPM
     unsigned long	interval;   // Time between steps
@@ -30,17 +32,20 @@ class DCCStepper {
     char		pattern[8]; // The step pattern
     unsigned int	maxSteps;   // Max steps in constrained mode
     unsigned int	thisStep;   // Current step in constrained mode
+    int			revDelay;
+    unsigned long	waitForDelay;
   public:
     DCCStepper(int, int, int, int, int, int);
-    DCCStepper(int, unsigned int, int, int, int, int, int, int);
+    DCCStepper(uint8_t, unsigned int, int, int, int, int, int, int);
     void loop();
     void setSpeed(int, boolean);
     void setActive(boolean);
     void setRPM(int);
-    void setMode(int);
+    void setMode(uint8_t);
     void setMaxStepsLSB(int);
     void setMaxStepsMSB(int);
     void setCurrentPosition(unsigned int);
+    void setReverseDelay(int);
 };
 
 extern void notifyStepperPosition(DCCStepper *, unsigned int) __attribute__ ((weak));
