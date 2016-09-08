@@ -12,6 +12,7 @@
 #define STEPPER_REVERSE			0x02
 #define STEPPER_AUTO_REVERSE		0x04
 #define STEPPER_RANDOM_DELAY		0x08
+#define STEPPER_CONTINUE_ON_DESELECT	0x10
 #define STEPPER_BIPOLAR			0x80
 
 class DCCStepper {
@@ -25,6 +26,7 @@ class DCCStepper {
     int			rpm;	    // Top speed in RPM
     unsigned long	interval;   // Time between steps
     boolean  		active;     // Is the servo active?
+    boolean		ignoreSpeed;// Ignore changes in speed
     boolean  		clockwise;  // Current direction is clockwise
     int      		percentage; // Current speed percentage
     unsigned long	refresh;    // Next refresh time mills()

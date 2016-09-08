@@ -20,6 +20,7 @@ int	i;
   this->clockwise = true;
   this->waitForDelay = 0;
   this->revDelay = 0;
+  this->ignoreSpeed = true;
 
   this->pattern[0] = 0x01; // 0001
   this->pattern[1] = 0x03; // 0011
@@ -56,6 +57,7 @@ int	i;
   this->refresh = millis() + this->interval;
   this->active = false;
   this->clockwise = true;
+  this->ignoreSpeed = true;
 
   if (mode & STEPPER_BIPOLAR)
   {
@@ -185,12 +187,13 @@ void DCCStepper::loop()
   }
   unsigned long delta = (this->interval * 100) / this->percentage;
   this->refresh = millis() + delta;
- 
 }
 
 void DCCStepper::setSpeed(int percentage, boolean clockwise)
 {
   boolean change = this->percentage != percentage;
+  if (this->ignoreSpeed)
+    return;
   this->percentage = percentage;
   if (this->mode & STEPPER_REVERSE)
 	clockwise = ! clockwise;
@@ -203,15 +206,25 @@ void DCCStepper::setSpeed(int percentage, boolean clockwise)
 	digitalWrite(this->pin3, LOW);
 	digitalWrite(this->pin4, LOW);
   }
-  if (change)
+  if (change && this->percentage)
     this->refresh = millis() + ((this->interval * 100) / this->percentage);
+  else if (this->percentage == 0)
+    this->refresh = millis() + this->interval;
 }
 
 void DCCStepper::setActive(boolean active)
 {
+  this->ignoreSpeed = active;
+  if (active == false && (this->mode & STEPPER_CONTINUE_ON_DESELECT) != 0)
+  {
+    return;
+  }
   if ((active == true) && (this->active == false))
   {
-    this->refresh = millis() + ((this->interval * 100) / this->percentage);
+    if (this->percentage > 0)
+      this->refresh = millis() + ((this->interval * 100) / this->percentage);
+    else
+      this->refresh = millis() + this->interval;
   }
   this->active = active;
   if (! this->active)
