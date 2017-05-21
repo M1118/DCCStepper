@@ -48,6 +48,8 @@ class DCCStepper {
     void setMaxStepsMSB(int);
     void setCurrentPosition(unsigned int);
     void setReverseDelay(int);
+    unsigned long getInterval();
+    unsigned int  getPosition();
 };
 
 extern void notifyStepperPosition(DCCStepper *, unsigned int) __attribute__ ((weak));

@@ -52,7 +52,9 @@ int	i;
   this->pin4 = pin4;
   this->rpm = rpm;
   this->steps = steps;
-  unsigned long steps_per_minute = (unsigned long)steps * (unsigned long)rpm;
+  unsigned long lsteps = steps;
+  unsigned long lrpm = rpm;
+  unsigned long steps_per_minute = lsteps * lrpm;
   this->interval = 60000 / steps_per_minute;
   this->refresh = millis() + this->interval;
   this->active = false;
@@ -214,7 +216,7 @@ void DCCStepper::setSpeed(int percentage, boolean clockwise)
 
 void DCCStepper::setActive(boolean active)
 {
-  this->ignoreSpeed = active;
+  this->ignoreSpeed = !active;
   if (active == false && (this->mode & STEPPER_CONTINUE_ON_DESELECT) != 0)
   {
     return;
@@ -312,4 +314,14 @@ void DCCStepper::setCurrentPosition(unsigned int position)
 void DCCStepper::setReverseDelay(int revDelay)
 {
   this->revDelay = revDelay;
+}
+
+unsigned long DCCStepper::getInterval()
+{
+  return this->interval;
+}
+
+unsigned int DCCStepper::getPosition()
+{
+  return this->currentStep;
 }
