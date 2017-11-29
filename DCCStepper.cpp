@@ -63,6 +63,7 @@ int	i;
 
   if (mode & STEPPER_BIPOLAR)
   {
+#if 0
     this->pattern[0] = 0x01; // 0001    1 Fwd 2 Off
     this->pattern[1] = 0x05; // 0101    1 Fwd 2 Fwd
     this->pattern[2] = 0x04; // 0100	1 Off 2 Fwd
@@ -71,6 +72,16 @@ int	i;
     this->pattern[5] = 0x0A; // 1010	1 Rev 2 Rev
     this->pattern[6] = 0x08; // 1000	1 Off 2 Rev
     this->pattern[7] = 0x09; // 1001	1 Fwd 2 Rev
+#else
+    this->pattern[0] = 0x06; // 0110    1 Fwd 2 Rev
+    this->pattern[1] = 0x05; // 0101    1 Fwd 2 Fwd
+    this->pattern[2] = 0x09; // 1001	1 Rev 2 Fwd
+    this->pattern[3] = 0x0A; // 1010	1 Rev 2 Rev
+    this->pattern[4] = 0x06; // 0110	1 Fwd 2 Rev
+    this->pattern[5] = 0x05; // 0101	1 Fwd 2 Fwd
+    this->pattern[6] = 0x09; // 1001	1 Rev 2 Fwd
+    this->pattern[7] = 0x0A; // 1010	1 Rev 2 Rev
+#endif
   }
   else
   {
@@ -115,10 +126,20 @@ void DCCStepper::loop()
 	{
 		if (this->thisStep >= this->maxSteps)
 		{
-			digitalWrite(this->pin1, LOW);
-			digitalWrite(this->pin2, LOW);
-			digitalWrite(this->pin3, LOW);
-			digitalWrite(this->pin4, LOW);
+			if (this->inverted())
+			{
+				digitalWrite(this->pin1, HIGH);
+				digitalWrite(this->pin2, HIGH);
+				digitalWrite(this->pin3, HIGH);
+				digitalWrite(this->pin4, HIGH);
+			}
+			else
+			{
+				digitalWrite(this->pin1, LOW);
+				digitalWrite(this->pin2, LOW);
+				digitalWrite(this->pin3, LOW);
+				digitalWrite(this->pin4, LOW);
+			}
 			if (this->mode & STEPPER_AUTO_REVERSE)
 			{
 				if (this->mode & STEPPER_RANDOM_DELAY)
@@ -141,10 +162,20 @@ void DCCStepper::loop()
 	{
 		if (this->thisStep == 0)
 		{
-			digitalWrite(this->pin1, LOW);
-			digitalWrite(this->pin2, LOW);
-			digitalWrite(this->pin3, LOW);
-			digitalWrite(this->pin4, LOW);
+			if (this->inverted())
+			{
+				digitalWrite(this->pin1, HIGH);
+				digitalWrite(this->pin2, HIGH);
+				digitalWrite(this->pin3, HIGH);
+				digitalWrite(this->pin4, HIGH);
+			}
+			else
+			{
+				digitalWrite(this->pin1, LOW);
+				digitalWrite(this->pin2, LOW);
+				digitalWrite(this->pin3, LOW);
+				digitalWrite(this->pin4, LOW);
+			}
 			if (this->mode & STEPPER_AUTO_REVERSE)
 			{
 				if (this->mode & STEPPER_RANDOM_DELAY)
@@ -167,14 +198,28 @@ void DCCStepper::loop()
 		notifyStepperPosition(this, this->thisStep);
   }
 
-  digitalWrite(this->pin1,
+  if (this->inverted())
+  {
+    digitalWrite(this->pin1,
+		(this->pattern[this->currentStep] & 0x8) ? LOW : HIGH);
+    digitalWrite(this->pin2,
+		(this->pattern[this->currentStep] & 0x4) ? LOW : HIGH);
+    digitalWrite(this->pin3,
+		(this->pattern[this->currentStep] & 0x2) ? LOW : HIGH);
+    digitalWrite(this->pin4,
+		(this->pattern[this->currentStep] & 0x1) ? LOW : HIGH);
+  }
+  else
+  {
+    digitalWrite(this->pin1,
 		(this->pattern[this->currentStep] & 0x8) ? HIGH : LOW);
-  digitalWrite(this->pin2,
+    digitalWrite(this->pin2,
 		(this->pattern[this->currentStep] & 0x4) ? HIGH : LOW);
-  digitalWrite(this->pin3,
+    digitalWrite(this->pin3,
 		(this->pattern[this->currentStep] & 0x2) ? HIGH : LOW);
-  digitalWrite(this->pin4,
+    digitalWrite(this->pin4,
 		(this->pattern[this->currentStep] & 0x1) ? HIGH : LOW);
+  }
   if (this->clockwise)
   {
     this->currentStep++;
@@ -201,7 +246,14 @@ void DCCStepper::setSpeed(int percentage, boolean clockwise)
 	clockwise = ! clockwise;
   change |= (this->clockwise == clockwise);
   this->clockwise = clockwise;
-  if (percentage == 0)
+  if (this->inverted() && percentage == 0)
+  {
+	digitalWrite(this->pin1, HIGH);
+	digitalWrite(this->pin2, HIGH);
+	digitalWrite(this->pin3, HIGH);
+	digitalWrite(this->pin4, HIGH);
+  }
+  else if (percentage == 0)
   {
 	digitalWrite(this->pin1, LOW);
 	digitalWrite(this->pin2, LOW);
@@ -229,7 +281,14 @@ void DCCStepper::setActive(boolean active)
       this->refresh = millis() + this->interval;
   }
   this->active = active;
-  if (! this->active)
+  if (this->inverted() && this->active == false)
+  {
+	digitalWrite(this->pin1, HIGH);
+	digitalWrite(this->pin2, HIGH);
+	digitalWrite(this->pin3, HIGH);
+	digitalWrite(this->pin4, HIGH);
+  }
+  else if (! this->active)
   {
 	digitalWrite(this->pin1, LOW);
 	digitalWrite(this->pin2, LOW);
@@ -324,4 +383,9 @@ unsigned long DCCStepper::getInterval()
 unsigned int DCCStepper::getPosition()
 {
   return this->currentStep;
+}
+
+boolean DCCStepper::inverted()
+{
+	return this->mode & STEPPER_INVERTED;
 }
