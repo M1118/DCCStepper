@@ -14,6 +14,7 @@
 #define STEPPER_RANDOM_DELAY		0x08
 #define STEPPER_CONTINUE_ON_DESELECT	0x10
 #define STEPPER_BIPOLAR			0x80
+#define STEPPER_INVERTED		0x40
 
 class DCCStepper {
   private:
@@ -36,6 +37,7 @@ class DCCStepper {
     unsigned int	thisStep;   // Current step in constrained mode
     int			revDelay;
     unsigned long	waitForDelay;
+    boolean		inverted();
   public:
     DCCStepper(int, int, int, int, int, int);
     DCCStepper(uint8_t, unsigned int, int, int, int, int, int, int);
@@ -46,6 +48,7 @@ class DCCStepper {
     void setMode(uint8_t);
     void setMaxStepsLSB(int);
     void setMaxStepsMSB(int);
+    unsigned int getMaxSteps() { return maxSteps; };
     void setCurrentPosition(unsigned int);
     void setReverseDelay(int);
     unsigned long getInterval();

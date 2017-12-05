@@ -241,6 +241,9 @@ void DCCStepper::setSpeed(int percentage, boolean clockwise)
   boolean change = this->percentage != percentage;
   if (this->ignoreSpeed)
     return;
+Serial.print("Set speed: ");
+Serial.print(percentage);
+Serial.println((clockwise ? " Clockwise" : " Anit-clockwise"));
   this->percentage = percentage;
   if (this->mode & STEPPER_REVERSE)
 	clockwise = ! clockwise;
